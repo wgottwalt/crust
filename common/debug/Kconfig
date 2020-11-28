@@ -99,4 +99,18 @@ config DEBUG_PRINT_SPRS
 		CPU implementation. Enable this option to print a subset
 		of these SPRs in a human-readable format during boot.
 
+config DEBUG_HWSPINLOCK_TEST
+	bool "Enable periodic lock/release of hardware spinlocks"
+	help
+		Enables a testloop, that goes through the first 32
+		spinlocks of the H3/H5/H6 (A83T,A64) continuously and
+		takes/releases a lock periodically.
+
+config DEBUG_HWSPINLOCK_TEST_TIMEOUT
+	int "microseconds"
+	depends on DEBUG_HWSPINLOCK_TEST
+	default 123000
+	help
+		Microseconds until changing the state of a lock.
+
 endmenu

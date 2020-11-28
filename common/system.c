@@ -26,6 +26,22 @@
 #include <msgbox/sunxi-msgbox.h>
 #include <watchdog/sunxi-twd.h>
 
+#if CONFIG(DEBUG_HWSPINLOCK_TEST)
+#include <timeout.h>
+#include <platform/devices.h>
+
+#define TIMEOUT_VAL	CONFIG_DEBUG_HWSPINLOCK_TEST_TIMEOUT /* us */
+#define VALUE_TO_STR(x)	#x
+#define STR(x)		VALUE_TO_STR(x)
+#pragma message		("WARNING: hwspinlock loop is enabled - timing: " STR(TIMEOUT_VAL) "us")
+
+#define readl(addr) (*((volatile unsigned long *)(addr)))
+#define writel(v, addr) (*((volatile unsigned long *)(addr)) = (unsigned long)(v))
+
+static uint16_t lock;
+static bool taken;
+#endif
+
 /* This variable is persisted across exception restarts. */
 static uint8_t system_state = SYSTEM_BOOT;
 
@@ -111,6 +127,11 @@ system_state_machine(uint32_t exception)
 		                    SCPI_CMD_SCP_READY);
 	}
 
+#if CONFIG(DEBUG_HWSPINLOCK_TEST)
+	lock = 0;
+	taken = false;
+#endif
+
 	for (;;) {
 		switch (system_state) {
 		case SYSTEM_ACTIVE:
@@ -121,6 +142,23 @@ system_state_machine(uint32_t exception)
 			/* Poll runtime services. */
 			if (mailbox)
 				scpi_poll(mailbox);
+
+#if CONFIG(DEBUG_HWSPINLOCK_TEST)
+			if (timeout_expired(TIMEOUT_VAL)) {
+				timeout_set(TIMEOUT_VAL);
+				if (taken) {
+					writel(0, DEV_SPINLOCK + DEV_SPINLOCK_LOCK_REGN + lock * 4);
+
+					++lock;
+					if (lock >= DEV_SPINLOCK_MAX_LOCKS)
+						lock = 0;
+					taken = false;
+				} else {
+					readl(DEV_SPINLOCK + DEV_SPINLOCK_LOCK_REGN + lock * 4);
+					taken = true;
+				}
+			}
+#endif
 
 			/*
 			 * Skip debugging hooks while the system is active,

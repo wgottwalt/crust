@@ -25,6 +25,9 @@
 #define DEV_CE          0x01c15000
 #define DEV_MSGBOX      0x01c17000
 #define DEV_SPINLOCK    0x01c18000
+#define DEV_SPINLOCK_STATUS_OFFSET  0x0010
+#define DEV_SPINLOCK_LOCK_REGN      0x0100
+#define DEV_SPINLOCK_MAX_LOCKS      32
 #define DEV_USBOTG      0x01c19000
 #define DEV_USB0        0x01c1a000
 #define DEV_USB1        0x01c1b000
