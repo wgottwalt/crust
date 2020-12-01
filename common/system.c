@@ -38,8 +38,8 @@
 #define readl(addr) (*((volatile unsigned long *)(addr)))
 #define writel(v, addr) (*((volatile unsigned long *)(addr)) = (unsigned long)(v))
 
+static uint32_t timeout;
 static uint16_t lock;
-static bool taken;
 #endif
 
 /* This variable is persisted across exception restarts. */
@@ -128,8 +128,8 @@ system_state_machine(uint32_t exception)
 	}
 
 #if CONFIG(DEBUG_HWSPINLOCK_TEST)
+	timeout = timeout_set(TIMEOUT_VAL);
 	lock = 0;
-	taken = false;
 #endif
 
 	for (;;) {
@@ -144,19 +144,15 @@ system_state_machine(uint32_t exception)
 				scpi_poll(mailbox);
 
 #if CONFIG(DEBUG_HWSPINLOCK_TEST)
-			if (timeout_expired(TIMEOUT_VAL)) {
-				timeout_set(TIMEOUT_VAL);
-				if (taken) {
-					writel(0, DEV_SPINLOCK + DEV_SPINLOCK_LOCK_REGN + lock * 4);
+			if (timeout_expired(timeout)) {
+				writel(0, DEV_SPINLOCK + DEV_SPINLOCK_LOCK_REGN + lock * 4);
 
-					++lock;
-					if (lock >= DEV_SPINLOCK_MAX_LOCKS)
-						lock = 0;
-					taken = false;
-				} else {
-					readl(DEV_SPINLOCK + DEV_SPINLOCK_LOCK_REGN + lock * 4);
-					taken = true;
-				}
+				timeout_set(TIMEOUT_VAL);
+
+				++lock;
+				if (lock >= DEV_SPINLOCK_MAX_LOCKS)
+					lock = 0;
+				readl(DEV_SPINLOCK + DEV_SPINLOCK_LOCK_REGN + lock * 4);
 			}
 #endif
 
