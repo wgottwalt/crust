@@ -147,7 +147,7 @@ system_state_machine(uint32_t exception)
 			if (timeout_expired(timeout)) {
 				writel(0, DEV_SPINLOCK + DEV_SPINLOCK_LOCK_REGN + lock * 4);
 
-				timeout_set(TIMEOUT_VAL);
+				timeout = timeout_set(TIMEOUT_VAL);
 
 				++lock;
 				if (lock >= DEV_SPINLOCK_MAX_LOCKS)
